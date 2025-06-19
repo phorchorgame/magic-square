@@ -127,6 +127,7 @@
   <div id="number-bank"></div>
 
   <button onclick="checkMagicSquare()">✅ ตรวจคำตอบ</button>
+  <button onclick="resetGame()">🔄 รีเซ็ตเกม</button>
   <div id="result"></div>
 
   <div id="rules-modal">
@@ -179,6 +180,7 @@
       grid.innerHTML = '';
       numberBank.innerHTML = '';
       selectedNumber = null;
+      document.getElementById("result").innerText = '';
       grid.style.gridTemplateColumns = `repeat(${gridSize}, 60px)`;
 
       for (let i = 0; i < gridSize * gridSize; i++) {
@@ -222,6 +224,10 @@
       startTimer();
     }
 
+    function resetGame() {
+      createGrid();
+    }
+
     function updateUsedNumbers() {
       const used = new Set();
       document.querySelectorAll(".droppable").forEach(cell => {
@@ -253,22 +259,26 @@
         return;
       }
 
-      const expectedSum = (gridSize * (gridSize * gridSize + 1)) / 2;
       const matrix = [];
       for (let i = 0; i < gridSize; i++) {
         matrix.push(values.slice(i * gridSize, (i + 1) * gridSize));
       }
 
+      const targetSum = matrix[0].reduce((a, b) => a + b, 0);
       let correct = true;
+
       for (let i = 0; i < gridSize; i++) {
         const rowSum = matrix[i].reduce((a, b) => a + b, 0);
         const colSum = matrix.map(row => row[i]).reduce((a, b) => a + b, 0);
-        if (rowSum !== expectedSum || colSum !== expectedSum) correct = false;
+        if (rowSum !== targetSum || colSum !== targetSum) {
+          correct = false;
+          break;
+        }
       }
 
       const diag1 = matrix.map((row, i) => row[i]).reduce((a, b) => a + b, 0);
       const diag2 = matrix.map((row, i) => row[gridSize - 1 - i]).reduce((a, b) => a + b, 0);
-      if (diag1 !== expectedSum || diag2 !== expectedSum) correct = false;
+      if (diag1 !== targetSum || diag2 !== targetSum) correct = false;
 
       clearInterval(timerInterval);
       document.getElementById("result").innerText = correct
