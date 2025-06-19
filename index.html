@@ -13,10 +13,13 @@
     h1 {
       color: #d35400;
     }
-    select, button {
+    select, button, input {
       font-size: 16px;
       margin: 10px;
       padding: 5px 10px;
+    }
+    input[type="number"]#maxNumber {
+      width: 100px;
     }
     #grid {
       margin: 20px auto;
@@ -47,6 +50,10 @@
       opacity: 0.4;
       text-decoration: line-through;
     }
+    .selected {
+      border: 3px dashed #8e44ad !important;
+      box-shadow: 0 0 10px #8e44ad;
+    }
     #number-bank {
       margin-top: 20px;
       display: flex;
@@ -64,6 +71,38 @@
       font-size: 18px;
       color: #8e44ad;
     }
+    #rules-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+    }
+    #rules-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      text-align: left;
+    }
+    #rules-content h2 {
+      margin-top: 0;
+      color: #d35400;
+    }
+    #rules-content button {
+      margin-top: 10px;
+      background-color: #d35400;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -72,12 +111,16 @@
     <div style="font-size: 20px; font-weight: bold;">โรงเรียนชำป่างามวิทยาคม</div>
   </div>
   <h1>✨ มหัศจรรย์จตุรัสกล ✨</h1>
+  <button onclick="showRules()">📘 กติกาการเล่น</button>
   <label for="size">เลือกขนาด:</label>
   <select id="size" onchange="createGrid()">
     <option value="3">3 x 3</option>
     <option value="4" selected>4 x 4</option>
     <option value="5">5 x 5</option>
   </select>
+
+  <label for="maxNumber">กำหนดเลขสูงสุด:</label>
+  <input type="number" id="maxNumber" value="25" min="1" onchange="createGrid()">
 
   <div id="timer">⏱️ เวลา: <span id="time">0</span> วินาที</div>
   <div id="grid"></div>
@@ -86,6 +129,24 @@
   <button onclick="checkMagicSquare()">✅ ตรวจคำตอบ</button>
   <div id="result"></div>
 
+  <div id="rules-modal">
+    <div id="rules-content">
+      <h2>📘 กติกาการเล่น</h2>
+      <ul>
+        <li>เลือกขนาดตารางที่ต้องการ: 3x3, 4x4 หรือ 5x5</li>
+        <li>กำหนดเลขสูงสุดที่จะใช้</li>
+        <li>กดเลือกตัวเลข แล้วแตะช่องที่ต้องการเพื่อวาง</li>
+        <li>แตะอีกครั้งที่ช่องเพื่อลบเลขออก</li>
+        <li>ห้ามใช้เลขซ้ำ</li>
+        <li>ผลรวมของตัวเลขในแถว คอลัมน์ และเส้นทแยงต้องเท่ากัน</li>
+      </ul>
+      <button onclick="hideRules()">ปิด</button>
+    </div>
+  </div>
+
+  <audio id="add-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_7c14b30368.mp3" preload="auto"></audio>
+  <audio id="remove-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_52f75abf70.mp3" preload="auto"></audio>
+
   <script>
     let gridSize = 4;
     let selectedNumber = null;
@@ -93,6 +154,8 @@
     const numberBank = document.getElementById("number-bank");
     let time = 0;
     let timerInterval;
+    const addSound = document.getElementById("add-sound");
+    const removeSound = document.getElementById("remove-sound");
 
     function startTimer() {
       clearInterval(timerInterval);
@@ -106,6 +169,13 @@
 
     function createGrid() {
       gridSize = parseInt(document.getElementById("size").value);
+      const maxNumber = parseInt(document.getElementById("maxNumber").value);
+
+      if (maxNumber < gridSize * gridSize) {
+        alert("เลขสูงสุดต้องไม่น้อยกว่าจำนวนช่องตาราง");
+        return;
+      }
+
       grid.innerHTML = '';
       numberBank.innerHTML = '';
       selectedNumber = null;
@@ -116,24 +186,34 @@
         cell.className = "cell droppable";
         cell.dataset.index = i;
         cell.addEventListener("click", function () {
+          if (this.textContent !== "") {
+            this.textContent = "";
+            removeSound.play();
+            updateUsedNumbers();
+            return;
+          }
           if (selectedNumber) {
             this.textContent = selectedNumber.textContent;
             selectedNumber.classList.add("used");
+            addSound.play();
             updateUsedNumbers();
+            selectedNumber.classList.remove("selected");
             selectedNumber = null;
           }
         });
         grid.appendChild(cell);
       }
 
-      for (let i = 1; i <= gridSize * gridSize; i++) {
+      for (let i = 1; i <= maxNumber; i++) {
         const num = document.createElement("div");
         num.className = "cell draggable";
         num.textContent = i;
         num.id = `num-${i}`;
         num.addEventListener("click", function () {
           if (!this.classList.contains("used")) {
+            if (selectedNumber) selectedNumber.classList.remove("selected");
             selectedNumber = this;
+            this.classList.add("selected");
           }
         });
         numberBank.appendChild(num);
@@ -194,6 +274,14 @@
       document.getElementById("result").innerText = correct
         ? `🎉 ยอดเยี่ยม! คุณทำสำเร็จในเวลา ${time} วินาที!`
         : "❌ ยังไม่ถูกต้อง ลองใหม่อีกครั้ง!";
+    }
+
+    function showRules() {
+      document.getElementById("rules-modal").style.display = "flex";
+    }
+
+    function hideRules() {
+      document.getElementById("rules-modal").style.display = "none";
     }
 
     createGrid();
