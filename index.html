@@ -37,7 +37,7 @@
       background-color: #fff9f4;
     }
     .draggable {
-      cursor: grab;
+      cursor: pointer;
       background-color: #ffcf99;
       border: 2px solid #e67e22;
       margin: 5px;
@@ -88,6 +88,7 @@
 
   <script>
     let gridSize = 4;
+    let selectedNumber = null;
     const grid = document.getElementById("grid");
     const numberBank = document.getElementById("number-bank");
     let time = 0;
@@ -107,18 +108,21 @@
       gridSize = parseInt(document.getElementById("size").value);
       grid.innerHTML = '';
       numberBank.innerHTML = '';
+      selectedNumber = null;
       grid.style.gridTemplateColumns = `repeat(${gridSize}, 60px)`;
 
       for (let i = 0; i < gridSize * gridSize; i++) {
         const cell = document.createElement("div");
         cell.className = "cell droppable";
         cell.dataset.index = i;
-        cell.ondragover = e => e.preventDefault();
-        cell.ondrop = function (e) {
-          const num = e.dataTransfer.getData("text/plain");
-          this.textContent = num;
-          updateUsedNumbers();
-        };
+        cell.addEventListener("click", function () {
+          if (selectedNumber) {
+            this.textContent = selectedNumber.textContent;
+            selectedNumber.classList.add("used");
+            updateUsedNumbers();
+            selectedNumber = null;
+          }
+        });
         grid.appendChild(cell);
       }
 
@@ -127,10 +131,11 @@
         num.className = "cell draggable";
         num.textContent = i;
         num.id = `num-${i}`;
-        num.draggable = true;
-        num.ondragstart = function (e) {
-          e.dataTransfer.setData("text/plain", this.textContent);
-        };
+        num.addEventListener("click", function () {
+          if (!this.classList.contains("used")) {
+            selectedNumber = this;
+          }
+        });
         numberBank.appendChild(num);
       }
 
