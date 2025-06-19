@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>เกมจัตุรัสกล - Magic Square</title>
+  <style>
+    body {
+      font-family: 'Prompt', sans-serif;
+      background: linear-gradient(to bottom right, #fff4e6, #ffe0cc);
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #d35400;
+    }
+    select, button {
+      font-size: 16px;
+      margin: 10px;
+      padding: 5px 10px;
+    }
+    #grid {
+      margin: 20px auto;
+      display: grid;
+      gap: 5px;
+      justify-content: center;
+    }
+    .cell {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #e67e22;
+      background-color: #fef9f4;
+      font-size: 22px;
+      line-height: 60px;
+      text-align: center;
+    }
+    .droppable {
+      background-color: #fff9f4;
+    }
+    .draggable {
+      cursor: grab;
+      background-color: #ffcf99;
+      border: 2px solid #e67e22;
+      margin: 5px;
+      transition: opacity 0.3s;
+    }
+    .used {
+      opacity: 0.4;
+      text-decoration: line-through;
+    }
+    #number-bank {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    #result {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    #timer {
+      margin-top: 10px;
+      font-size: 18px;
+      color: #8e44ad;
+    }
+  </style>
+</head>
+<body>
+  <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 10px;">
+    <img src="https://img2.pic.in.th/pic/7b91f9a4231bf518435ac5e050cfc2ec.png" alt="โลโก้โรงเรียน" style="width: 80px; height: auto;">
+    <div style="font-size: 20px; font-weight: bold;">โรงเรียนชำป่างามวิทยาคม</div>
+  </div>
+  <h1>✨ เกมจัตุรัสกล ✨</h1>
+  <label for="size">เลือกขนาด:</label>
+  <select id="size" onchange="createGrid()">
+    <option value="3">3 x 3</option>
+    <option value="4" selected>4 x 4</option>
+    <option value="5">5 x 5</option>
+  </select>
+
+  <div id="timer">⏱️ เวลา: <span id="time">0</span> วินาที</div>
+  <div id="grid"></div>
+  <div id="number-bank"></div>
+
+  <button onclick="checkMagicSquare()">✅ ตรวจคำตอบ</button>
+  <div id="result"></div>
+
+  <script>
+    let gridSize = 4;
+    const grid = document.getElementById("grid");
+    const numberBank = document.getElementById("number-bank");
+    let time = 0;
+    let timerInterval;
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      time = 0;
+      document.getElementById("time").textContent = time;
+      timerInterval = setInterval(() => {
+        time++;
+        document.getElementById("time").textContent = time;
+      }, 1000);
+    }
+
+    function createGrid() {
+      gridSize = parseInt(document.getElementById("size").value);
+      grid.innerHTML = '';
+      numberBank.innerHTML = '';
+      grid.style.gridTemplateColumns = `repeat(${gridSize}, 60px)`;
+
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell droppable";
+        cell.dataset.index = i;
+        cell.ondragover = e => e.preventDefault();
+        cell.ondrop = function (e) {
+          const num = e.dataTransfer.getData("text/plain");
+          this.textContent = num;
+          updateUsedNumbers();
+        };
+        grid.appendChild(cell);
+      }
+
+      for (let i = 1; i <= gridSize * gridSize; i++) {
+        const num = document.createElement("div");
+        num.className = "cell draggable";
+        num.textContent = i;
+        num.id = `num-${i}`;
+        num.draggable = true;
+        num.ondragstart = function (e) {
+          e.dataTransfer.setData("text/plain", this.textContent);
+        };
+        numberBank.appendChild(num);
+      }
+
+      startTimer();
+    }
+
+    function updateUsedNumbers() {
+      const used = new Set();
+      document.querySelectorAll(".droppable").forEach(cell => {
+        const val = parseInt(cell.textContent);
+        if (!isNaN(val)) used.add(val);
+      });
+      document.querySelectorAll(".draggable").forEach(num => {
+        const val = parseInt(num.textContent);
+        if (used.has(val)) {
+          num.classList.add("used");
+        } else {
+          num.classList.remove("used");
+        }
+      });
+    }
+
+    function checkMagicSquare() {
+      const cells = document.querySelectorAll(".droppable");
+      const values = Array.from(cells).map(c => parseInt(c.textContent));
+
+      if (values.some(isNaN)) {
+        document.getElementById("result").innerText = "กรุณาวางตัวเลขให้ครบทุกช่อง!";
+        return;
+      }
+
+      const set = new Set(values);
+      if (set.size !== gridSize * gridSize) {
+        document.getElementById("result").innerText = "ห้ามมีตัวเลขซ้ำ!";
+        return;
+      }
+
+      const expectedSum = (gridSize * (gridSize * gridSize + 1)) / 2;
+      const matrix = [];
+      for (let i = 0; i < gridSize; i++) {
+        matrix.push(values.slice(i * gridSize, (i + 1) * gridSize));
+      }
+
+      let correct = true;
+      for (let i = 0; i < gridSize; i++) {
+        const rowSum = matrix[i].reduce((a, b) => a + b, 0);
+        const colSum = matrix.map(row => row[i]).reduce((a, b) => a + b, 0);
+        if (rowSum !== expectedSum || colSum !== expectedSum) correct = false;
+      }
+
+      const diag1 = matrix.map((row, i) => row[i]).reduce((a, b) => a + b, 0);
+      const diag2 = matrix.map((row, i) => row[gridSize - 1 - i]).reduce((a, b) => a + b, 0);
+      if (diag1 !== expectedSum || diag2 !== expectedSum) correct = false;
+
+      clearInterval(timerInterval);
+      document.getElementById("result").innerText = correct
+        ? `🎉 ยอดเยี่ยม! คุณทำสำเร็จในเวลา ${time} วินาที!`
+        : "❌ ยังไม่ถูกต้อง ลองใหม่อีกครั้ง!";
+    }
+
+    createGrid();
+  </script>
+</body>
+</html>
